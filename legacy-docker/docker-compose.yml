@@ -1,0 +1,41 @@
+services:
+  db:
+    image: mysql:5.7
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: miruslug_root_local
+      MYSQL_DATABASE: miruslug
+      MYSQL_USER: miruslug
+      MYSQL_PASSWORD: miruslug_local
+    command:
+      - --character-set-server=utf8
+      - --collation-server=utf8_general_ci
+      - --sql-mode=NO_ENGINE_SUBSTITUTION
+    volumes:
+      - miruslug-db:/var/lib/mysql
+      - ../sources/itasi178_servdb.sql:/docker-entrypoint-initdb.d/01-miruslug.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -pmiruslug_root_local --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  web:
+    build:
+      context: ..
+      dockerfile: legacy-docker/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MIRUSLUG_DB_HOST: db
+      MIRUSLUG_DB_NAME: miruslug
+      MIRUSLUG_DB_USER: miruslug
+      MIRUSLUG_DB_PASSWORD: miruslug_local
+    ports:
+      - "127.0.0.1:8080:80"
+
+volumes:
+  miruslug-db:
