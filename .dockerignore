@@ -1,0 +1,17 @@
+.git/
+.gitignore
+
+design/
+miruslug.zip
+sources/miruslug.tar.gz
+sources/Доступы.rtf
+
+# Never send the archived production DB config into Docker build context.
+sources/miruslug/manager/includes/config.inc.php
+
+# Old server/macOS debris is not needed in the image.
+**/.DS_Store
+**/._*
+**/.Spotlight-V100
+**/.fseventsd
+**/error_log
