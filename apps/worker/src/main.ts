@@ -63,7 +63,7 @@ const classificationWorker = new Worker<ClassificationJob>(
 
     await prisma.requestDraft.update({ where: { id: draft.id }, data: { status: 'PROMOTED' } });
     await distributionQueue.add('distribute-request', { requestId: request.id, wave: 0 }, {
-      jobId: `distribute:${request.id}:0`,
+      jobId: `distribute-${request.id}-0`,
       removeOnComplete: 1000,
       removeOnFail: 5000,
     });
@@ -142,7 +142,7 @@ const distributionWorker = new Worker<DistributionJob>(
     if (wave < DISTRIBUTION_WAVE_SIZES.length - 1) {
       const delay = DISTRIBUTION_WAVE_DELAYS_MS[wave] ?? 180_000;
       await distributionQueue.add('distribute-request', { requestId, wave: wave + 1 }, {
-        jobId: `distribute:${requestId}:${wave + 1}`,
+        jobId: `distribute-${requestId}-${wave + 1}`,
         delay,
         removeOnComplete: 1000,
         removeOnFail: 5000,
