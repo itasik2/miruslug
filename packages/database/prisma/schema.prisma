@@ -1,0 +1,219 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ChannelType {
+  WEB
+  WHATSAPP
+  INSTAGRAM
+}
+
+enum ConversationStatus {
+  OPEN
+  CLOSED
+}
+
+enum MessageDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum DraftStatus {
+  NEW
+  CLASSIFIED
+  PROMOTED
+  REJECTED
+}
+
+enum RequestStatus {
+  NEW
+  DISTRIBUTING
+  COLLECTING_OFFERS
+  SELECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum ProviderStatus {
+  ACTIVE
+  PAUSED
+  BLOCKED
+}
+
+enum OfferStatus {
+  SUBMITTED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+}
+
+enum DistributionStatus {
+  QUEUED
+  SENT
+  RESPONDED
+  EXPIRED
+}
+
+model Conversation {
+  id                 String             @id @default(cuid())
+  channel            ChannelType
+  externalThreadId   String?
+  customerExternalId String?
+  customerName       String?
+  customerPhone      String?
+  status             ConversationStatus @default(OPEN)
+  messages           Message[]
+  drafts             RequestDraft[]
+  requests           Request[]
+  createdAt          DateTime           @default(now())
+  updatedAt          DateTime           @updatedAt
+
+  @@unique([channel, externalThreadId])
+  @@index([channel, createdAt])
+}
+
+model Message {
+  id                String           @id @default(cuid())
+  conversationId    String
+  conversation      Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  externalMessageId String?
+  direction         MessageDirection @default(INBOUND)
+  text              String
+  rawPayload        Json?
+  drafts            RequestDraft[]
+  createdAt         DateTime         @default(now())
+
+  @@unique([conversationId, externalMessageId])
+  @@index([conversationId, createdAt])
+}
+
+model RequestDraft {
+  id             String                 @id @default(cuid())
+  conversationId String
+  conversation   Conversation           @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sourceMessageId String
+  sourceMessage  Message                @relation(fields: [sourceMessageId], references: [id], onDelete: Cascade)
+  rawText        String
+  normalizedText String?
+  city           String?
+  address        String?
+  status         DraftStatus            @default(NEW)
+  classification RequestClassification?
+  request        Request?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+
+  @@index([status, createdAt])
+}
+
+model RequestClassification {
+  id              String       @id @default(cuid())
+  requestDraftId  String       @unique
+  requestDraft    RequestDraft @relation(fields: [requestDraftId], references: [id], onDelete: Cascade)
+  categoryKey     String
+  serviceKey      String
+  confidence      Float
+  matchedKeywords Json?
+  classifier      String       @default("rules-v1")
+  createdAt       DateTime     @default(now())
+}
+
+model Request {
+  id               String               @id @default(cuid())
+  requestDraftId   String               @unique
+  requestDraft     RequestDraft         @relation(fields: [requestDraftId], references: [id], onDelete: Restrict)
+  conversationId   String
+  conversation     Conversation         @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  categoryKey      String
+  serviceKey       String
+  title            String
+  description      String
+  city             String?
+  address          String?
+  urgent           Boolean              @default(false)
+  status           RequestStatus        @default(NEW)
+  distributionWave Int                  @default(0)
+  distributions    RequestDistribution[]
+  offers           Offer[]
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+
+  @@index([status, createdAt])
+  @@index([categoryKey, serviceKey])
+}
+
+model Provider {
+  id                 String            @id @default(cuid())
+  displayName        String
+  phone              String?
+  whatsappId         String?
+  instagramId        String?
+  status             ProviderStatus    @default(ACTIVE)
+  reliabilityScore   Float             @default(0.5)
+  responseSpeedScore Float             @default(0.5)
+  jobsCompleted      Int               @default(0)
+  lastSeenAt         DateTime?
+  services           ProviderService[]
+  distributions      RequestDistribution[]
+  offers             Offer[]
+  createdAt          DateTime          @default(now())
+  updatedAt          DateTime          @updatedAt
+
+  @@index([status])
+}
+
+model ProviderService {
+  id            String   @id @default(cuid())
+  providerId    String
+  provider      Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  categoryKey   String
+  serviceKey    String
+  enabled       Boolean  @default(true)
+  minPriceKzt   Int?
+  maxDistanceKm Int?
+  createdAt     DateTime @default(now())
+
+  @@unique([providerId, serviceKey])
+  @@index([serviceKey, enabled])
+  @@index([categoryKey, enabled])
+}
+
+model RequestDistribution {
+  id          String             @id @default(cuid())
+  requestId   String
+  request     Request            @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  providerId  String
+  provider    Provider           @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  wave        Int
+  score       Float
+  status      DistributionStatus @default(QUEUED)
+  sentAt      DateTime?
+  respondedAt DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime           @default(now())
+
+  @@unique([requestId, providerId])
+  @@index([requestId, wave])
+}
+
+model Offer {
+  id         String      @id @default(cuid())
+  requestId  String
+  request    Request     @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  providerId String
+  provider   Provider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  priceKzt   Int
+  etaMinutes Int
+  comment    String?
+  status     OfferStatus @default(SUBMITTED)
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([requestId, providerId])
+  @@index([requestId, status, createdAt])
+}

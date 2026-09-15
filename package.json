@@ -1,0 +1,26 @@
+{
+  "name": "miruslug-2-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "modern-next",
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "npm run build -w @miruslug/core && npm run build -w @miruslug/database && npm run build -w @miruslug/queue && npm run build -w @miruslug/api && npm run build -w @miruslug/worker && npm run build -w miruslug-modern",
+    "build:backend": "npm run build -w @miruslug/core && npm run build -w @miruslug/database && npm run build -w @miruslug/queue && npm run build -w @miruslug/api && npm run build -w @miruslug/worker",
+    "dev:api": "npm run dev -w @miruslug/api",
+    "dev:worker": "npm run dev -w @miruslug/worker",
+    "dev:web": "npm run dev -w miruslug-modern",
+    "prisma:generate": "npm run prisma:generate -w @miruslug/database",
+    "prisma:migrate": "npm run prisma:migrate -w @miruslug/database"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0"
+  }
+}
