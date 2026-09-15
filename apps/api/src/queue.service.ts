@@ -21,7 +21,7 @@ export class QueueService implements OnApplicationShutdown {
 
   enqueueClassification(draftId: string) {
     return this.classification.add('classify-request-draft', { draftId }, {
-      jobId: `classify:${draftId}`,
+      jobId: `classify-${draftId}`,
       removeOnComplete: 1000,
       removeOnFail: 5000,
     });
@@ -29,7 +29,7 @@ export class QueueService implements OnApplicationShutdown {
 
   enqueueDistribution(requestId: string, wave = 0, delay = 0) {
     return this.distribution.add('distribute-request', { requestId, wave }, {
-      jobId: `distribute:${requestId}:${wave}`,
+      jobId: `distribute-${requestId}-${wave}`,
       delay,
       removeOnComplete: 1000,
       removeOnFail: 5000,
