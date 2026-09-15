@@ -11,7 +11,13 @@ export type ClassificationResult = {
   matchedKeywords: string[];
 };
 
-const TAXONOMY = [
+type TaxonomyEntry = {
+  categoryKey: string;
+  serviceKey: string;
+  keywords: readonly string[];
+};
+
+const TAXONOMY: readonly TaxonomyEntry[] = [
   { categoryKey: 'computers', serviceKey: 'computer-repair', keywords: ['компьютер', 'ноутбук', 'windows', 'виндовс', 'моноблок', 'роутер'] },
   { categoryKey: 'appliances', serviceKey: 'appliance-repair', keywords: ['стиральн', 'холодильник', 'микроволнов', 'пылесос', 'посудомоеч', 'бытов'] },
   { categoryKey: 'handyman', serviceKey: 'handyman', keywords: ['мастер на час', 'повесить', 'собрать мебель', 'полка', 'карниз', 'смеситель'] },
@@ -23,11 +29,11 @@ const TAXONOMY = [
   { categoryKey: 'errands', serviceKey: 'errands', keywords: ['поручение', 'забрать', 'отнести', 'купить и привезти'] },
   { categoryKey: 'auto', serviceKey: 'mobile-auto-service', keywords: ['авто', 'машин', 'аккумулятор', 'прикурить', 'шиномонтаж', 'автосервис'] },
   { categoryKey: 'beauty', serviceKey: 'mobile-beauty', keywords: ['макияж', 'маникюр', 'прическ', 'парикмахер', 'косметолог'] },
-] as const;
+];
 
 export function classifyRequestText(input: string): ClassificationResult {
   const text = input.toLocaleLowerCase('ru-RU');
-  let best = TAXONOMY[0];
+  let best: TaxonomyEntry = TAXONOMY[0];
   let matches: string[] = [];
 
   for (const entry of TAXONOMY) {
