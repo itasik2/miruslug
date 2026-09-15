@@ -28,12 +28,20 @@ const steps = [
   ['4', 'Получите результат', 'Исполнитель выполняет задачу, а вы оцениваете работу.'],
 ];
 
+type RequestSubmitResponse = {
+  requestDraftId?: string | null;
+  message?: string | string[];
+};
+
 export default function HomePage() {
   const [city, setCity] = useState('');
   const [cityPickerOpen, setCityPickerOpen] = useState(true);
   const [requestOpen, setRequestOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [sent, setSent] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
+  const [requestDraftId, setRequestDraftId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
   useEffect(() => {
@@ -58,9 +66,47 @@ export default function HomePage() {
     setCityPickerOpen(false);
   }
 
-  function submitRequest(event: FormEvent<HTMLFormElement>) {
+  async function submitRequest(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    setSent(true);
+    setSubmitting(true);
+    setSubmitError('');
+
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch('/api/requests', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          text: String(formData.get('task') || '').trim(),
+          customerName: String(formData.get('name') || '').trim(),
+          customerPhone: String(formData.get('phone') || '').trim(),
+          city,
+        }),
+      });
+
+      const payload = await response.json() as RequestSubmitResponse;
+      if (!response.ok) {
+        const message = Array.isArray(payload.message) ? payload.message.join(', ') : payload.message;
+        throw new Error(message || 'Не удалось отправить заявку');
+      }
+
+      setRequestDraftId(payload.requestDraftId || null);
+      setSent(true);
+      form.reset();
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Не удалось отправить заявку');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  function closeRequest() {
+    setSent(false);
+    setSubmitError('');
+    setRequestDraftId(null);
+    setRequestOpen(false);
   }
 
   return (
@@ -120,7 +166,7 @@ export default function HomePage() {
           <div className="hero-card">
             <p className="eyebrow">Срочно нужна помощь?</p>
             <h2>Расскажите, что случилось</h2>
-            <p>Заполните короткую форму. Мы сохранили простоту старого MirUslug, но сделали интерфейс нормальным для 2026 года.</p>
+            <p>Заполните короткую форму. Заявка сразу попадёт в единый MirUslug Inbox и уйдёт на автоматическую классификацию.</p>
             <button className="primary-button full" onClick={() => setRequestOpen(true)}>Оформить заявку</button>
           </div>
         </div>
@@ -191,8 +237,8 @@ export default function HomePage() {
             <p>Оригинальный сервис уже предлагал одну точку входа для десятков бытовых задач. Эта версия сохраняет узнаваемую оранжево-тёмную палитру и прямой сценарий заявки, но получает адаптивность, современную типографику, быстрый поиск и понятные действия.</p>
             <div className="trust-metrics">
               <div><strong>11</strong><span>категорий из старого сервиса</span></div>
-              <div><strong>2</strong><span>исторических города в демо</span></div>
-              <div><strong>1</strong><span>форма вместо лабиринта страниц</span></div>
+              <div><strong>3</strong><span>равноправных канала заявок</span></div>
+              <div><strong>1</strong><span>единый inbox и pipeline</span></div>
             </div>
           </div>
           <div className="heritage-card">
@@ -208,7 +254,7 @@ export default function HomePage() {
           <div>
             <span className="eyebrow">Исполнителям</span>
             <h2>Получайте заказы в своём городе</h2>
-            <p>Для мастеров, сервисов, курьеров, клининга, автоуслуг и других специалистов. Современная версия уже готова стать входной точкой для отдельного кабинета исполнителя.</p>
+            <p>Для мастеров, сервисов, курьеров, клининга, автоуслуг и других специалистов. Следующий кабинет исполнителя будет работать поверх уже готового распределения и откликов.</p>
           </div>
           <button className="provider-button" onClick={() => setRequestOpen(true)}>Стать исполнителем →</button>
         </div>
@@ -236,28 +282,30 @@ export default function HomePage() {
       </footer>
 
       {requestOpen && (
-        <div className="modal-backdrop" onMouseDown={() => setRequestOpen(false)}>
+        <div className="modal-backdrop" onMouseDown={closeRequest}>
           <div className="request-modal" onMouseDown={(e) => e.stopPropagation()}>
-            <button className="modal-close" aria-label="Закрыть" onClick={() => setRequestOpen(false)}>×</button>
+            <button className="modal-close" aria-label="Закрыть" onClick={closeRequest}>×</button>
             {!sent ? (
               <>
                 <span className="eyebrow">Заявка</span>
                 <h2>Что нужно сделать?</h2>
-                <p className="modal-copy">Оставьте минимум данных. Эта форма пока демонстрационная и никуда ничего не отправляет.</p>
+                <p className="modal-copy">Опишите задачу обычными словами. Категорию и услугу сервис определит автоматически.</p>
                 <form onSubmit={submitRequest}>
-                  <label>Ваше имя<input required name="name" placeholder="Имя" /></label>
-                  <label>Телефон<input required name="phone" placeholder="+7 7__ ___ __ __" inputMode="tel" /></label>
-                  <label>Город<select value={city} onChange={(e) => setCity(e.target.value)} required><option value="">Выберите город</option>{cities.map((item) => <option key={item}>{item}</option>)}</select></label>
-                  <label>Опишите задачу<textarea required name="task" rows={4} placeholder="Например: течёт кран, нужен мастер сегодня после 18:00" /></label>
-                  <button className="primary-button full" type="submit">Отправить заявку</button>
+                  <label>Ваше имя<input required name="name" placeholder="Имя" disabled={submitting} /></label>
+                  <label>Телефон<input required name="phone" placeholder="+7 7__ ___ __ __" inputMode="tel" disabled={submitting} /></label>
+                  <label>Город<select value={city} onChange={(e) => setCity(e.target.value)} required disabled={submitting}><option value="">Выберите город</option>{cities.map((item) => <option key={item}>{item}</option>)}</select></label>
+                  <label>Опишите задачу<textarea required name="task" minLength={2} maxLength={5000} rows={4} placeholder="Например: течёт кран, нужен мастер сегодня после 18:00" disabled={submitting} /></label>
+                  {submitError && <p className="modal-copy" role="alert">Не удалось отправить: {submitError}</p>}
+                  <button className="primary-button full" type="submit" disabled={submitting}>{submitting ? 'Отправляем…' : 'Отправить заявку'}</button>
                 </form>
               </>
             ) : (
               <div className="success-state">
                 <div className="success-icon">✓</div>
-                <h2>Интерфейс работает</h2>
-                <p>На следующем этапе сюда подключается реальный API заявок.</p>
-                <button className="primary-button" onClick={() => { setSent(false); setRequestOpen(false); }}>Закрыть</button>
+                <h2>Заявка принята</h2>
+                <p>Она уже находится в едином inbox и поставлена в очередь на классификацию и подбор исполнителей.</p>
+                {requestDraftId && <p className="modal-copy">Номер обработки: {requestDraftId}</p>}
+                <button className="primary-button" onClick={closeRequest}>Закрыть</button>
               </div>
             )}
           </div>
