@@ -21,27 +21,28 @@
 - современная структура секций;
 - никаких зависимостей от MODX, PHP или MySQL.
 
-Форма заявки пока демонстрационная и не отправляет данные на backend.
+Форма заявки подключена к MirUslug 2 backend через same-origin route `POST /api/requests`. Route работает на сервере Next.js и пересылает данные в NestJS `POST /v1/inbox/messages` с каналом `WEB`.
 
 ## Локальный запуск
 
 ```bash
-cd modern-next
+cd ..
 npm install
-npm run dev
+npm run dev:api
+npm run dev:worker
+npm run dev:web
 ```
 
-Открыть:
+По умолчанию web proxy ожидает API на:
 
 ```text
-http://localhost:3000
+http://127.0.0.1:4000
 ```
 
 ## Production build
 
 ```bash
 npm run build
-npm run start
 ```
 
 ## Vercel
@@ -54,6 +55,19 @@ modern-next
 
 Framework Preset: Next.js.
 
-## Следующий этап
+Добавьте server-side environment variable:
 
-Интерфейс можно подключить либо к отдельному backend MirUslug, либо использовать как визуальную основу для QalaHub. Категории в текущей версии восстановлены по старому сервису: ремонт компьютеров, бытовая техника, мастер на час, ремонт помещений, грузоперевозки, курьеры, уборка, фото/оформление, поручения, выездной автосервис и красота на выезд.
+```text
+MIRUSLUG_API_URL=https://<railway-api-domain>
+```
+
+Она не имеет префикса `NEXT_PUBLIC_`, поэтому адрес backend не встраивается в клиентский JavaScript.
+
+## Pipeline заявки
+
+```text
+Web form -> Next.js /api/requests -> NestJS Unified Inbox -> Conversation -> Message
+         -> RequestDraft -> Classification Worker -> Request -> Distribution Worker
+```
+
+WhatsApp Business Cloud API и Instagram Direct используют тот же Unified Inbox через Meta webhook adapters в `apps/api`.
