@@ -14,6 +14,22 @@ export class InboxService {
   async ingest(input: InboundMessageInput) {
     const result = await this.prisma.$transaction(async (tx) => {
       const conversation = await this.resolveConversation(tx, input);
+
+      if (input.externalMessageId) {
+        const existing = await tx.message.findUnique({
+          where: {
+            conversationId_externalMessageId: {
+              conversationId: conversation.id,
+              externalMessageId: input.externalMessageId,
+            },
+          },
+        });
+
+        if (existing) {
+          return { conversation, message: existing, draft: null };
+        }
+      }
+
       const message = await tx.message.create({
         data: {
           conversationId: conversation.id,
@@ -35,6 +51,15 @@ export class InboxService {
 
       return { conversation, message, draft };
     });
+
+    if (!result.draft) {
+      return {
+        conversationId: result.conversation.id,
+        messageId: result.message.id,
+        requestDraftId: null,
+        status: 'duplicate_ignored',
+      };
+    }
 
     await this.queues.enqueueClassification(result.draft.id);
     return {
