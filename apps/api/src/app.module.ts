@@ -6,9 +6,17 @@ import { InboxController } from './inbox.controller';
 import { InboxService } from './inbox.service';
 import { ProvidersController } from './providers.controller';
 import { RequestsController } from './requests.controller';
+import { MetaWebhookController } from './meta-webhook.controller';
+import { MetaWebhookService } from './meta-webhook.service';
 
 @Module({
-  controllers: [HealthController, InboxController, ProvidersController, RequestsController],
-  providers: [PrismaService, QueueService, InboxService],
+  controllers: [
+    HealthController,
+    InboxController,
+    ProvidersController,
+    RequestsController,
+    MetaWebhookController,
+  ],
+  providers: [PrismaService, QueueService, InboxService, MetaWebhookService],
 })
 export class AppModule {}
