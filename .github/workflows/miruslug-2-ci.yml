@@ -1,0 +1,35 @@
+name: MirUslug 2 CI
+
+on:
+  push:
+    branches: [main, "feat/**"]
+    paths:
+      - "modern-next/**"
+      - "apps/**"
+      - "packages/**"
+      - "package.json"
+      - "tsconfig.base.json"
+      - ".github/workflows/miruslug-2-ci.yml"
+  pull_request:
+    paths:
+      - "modern-next/**"
+      - "apps/**"
+      - "packages/**"
+      - "package.json"
+      - "tsconfig.base.json"
+      - ".github/workflows/miruslug-2-ci.yml"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm install
+      - run: npm run build
+        env:
+          DATABASE_URL: postgresql://user:password@localhost:5432/miruslug
